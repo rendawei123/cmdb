@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+
+</head>
+<body>
+    <ul>
+        {% for row in server_list %}
+            <li>{{ row.hostname }}={{ row.server_status_id_name }}</li>
+        {% endfor %}
+    </ul>
+
+    <script src="/static/js/jquery-3.2.1.js"></script>
+    <script>
+        $.ajax({
+            url:'/test_ajax.html',
+            type:'GET',
+            data:{'name':'alex','age':18,'hobby':[11,22,33],'test':{'k1':'v1'}},
+            //traditional:true,
+            success:function(arg){
+                console.log(arg);
+            }
+        })
+
+
+    </script>
+
+</body>
+</html>
