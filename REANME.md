@@ -267,3 +267,408 @@ pool.submit(task,i)    # 运行线程，括号里面分别为函数名和参数
 ### 后台管理（curd）插件
 
 *后台管理基本上就是对数据库的一些怎删改查*
+
+
+
+# 服务器
+
+### 服务器
+
+ *服务器其实就是一台更牛逼的电脑*
+
+初创公司
+
+租云服务器、买服务器（买服务器需要很大成本的维护）----装系统--------租公网IP-------------租域名---------------------建立公网IP和域名之间的关系
+
+大型公司
+
+买服务器------------租机房----------------维护人员
+
+超大型公司
+
+买服务器---------------建机房----------------运维
+
+### 管理系统（自动化运维平台）
+
+- 自动装系统
+- 配置管理系统
+  - 装什么软件
+  - 装什么版本
+- 监控系统
+- 代码发布系统
+  - rsync
+  - git/svn
+  - 比特流
+- 服务器的管理
+
+  ​	服务器资产自动采集
+
+  	报表
+
+  	数据交换
+
+### SaltStack
+
+> 关闭防火墙以及se
+
+```
+"""
+1. 安装salt-master
+    yum install salt-master
+2. 修改配置文件：/etc/salt/master
+    interface: 0.0.0.0    # 表示Master的IP 
+3. 启动
+    service salt-master start
+"""
+```
+
+master : service salt-master start
+
+```
+"""
+1. 安装salt-minion
+    yum install salt-minion
+
+2. 修改配置文件 /etc/salt/minion
+    master: 10.211.55.4           # master的地址
+    或
+    master:
+        - 10.211.55.4
+        - 10.211.55.5
+    random_master: True
+
+    id: c2.salt.com                    # 客户端在salt-master中显示的唯一ID
+3. 启动
+    service salt-minion start
+"""
+```
+
+授权
+
+```
+"""
+salt-key -L                    # 查看已授权和未授权的slave
+salt-key -a  salve_id      # 接受指定id的salve
+salt-key -r  salve_id      # 拒绝指定id的salve
+salt-key -d  salve_id      # 删除指定id的salve
+"""
+```
+
+执行命令
+
+在master服务器上对salve进行远程操作
+
+```
+salt 'c2.salt.com' cmd.run  'ifconfig'
+
+
+import salt.client
+local = salt.client.LocalClient()
+result = local.cmd('c2.salt.com', 'cmd.run', ['ifconfig'])
+```
+
+官网
+
+1. Run the following commands to install the SaltStack repository and key:
+
+   ```
+   sudo yum install https://repo.saltstack.com/yum/redhat/salt-repo-latest-2.el7.noarch.rpm 
+   ```
+
+2. Run `sudo yum clean expire-cache`
+
+3. Install the salt-minion, salt-master, or other Salt components:
+
+   - `sudo yum install salt-master`
+   - `sudo yum install salt-minion`
+
+
+
+# 软件部署
+
+```
+- 服务器管理回顾
+- 问题？
+- 坑，SN号唯一
+	- 物理机，SN唯一
+	- 虚拟机，sn相同的
+	规则，约束：主机名
+- 事务：
+	某些行为组合成一个原子性操作；
+	回滚；
+	条件：
+		数据库：innodb
+		  代码：事务
+- 数据库补充
+
+- 后台管理
+```
+
+内容详细：
+
+```
+1. 服务器管理回顾
+	- 资产采集
+		- 线程池
+		- 兼容三种方式
+		- 可插拔式插件
+		- 配置文件
+		- requests
+			发送：
+				requests.post(url='',data=,json=)
+				requests.get()
+			Django接受：
+				request.POST, content-type:
+		- traceback
+		- paramiko模块，基于SSH链接远程主机并执行命令
+		- SaltStack
+		- API验证
+			key,time|time
+	- API
+	- 后台管理
+2. 问题？
+	a. 服务器资产采集系统流程？
+		  ssh：中控机，
+		 salt：master，
+		agent：每台服务器都需要
+	
+	b. 代码如何部署到服务器上？
+		- git
+		- 代码打成：rpm包，运维
+			yum install xxxxx
+			
+	c. 什么时候安装到服务器上的？
+		服务器装完系统后，自动做环境初始化:c1.com
+			puppet 模板
+			
+				c1.com 文件：
+					yum install python
+					yum isntall requests
+					create file a1.py
+					cp xx  xxx 
+					yum install xxxxx
+					加入到定时任务中
+				c2.com 
+					yum install python
+					yum isntall requests
+					create file a1.py
+					cp xx  xxx 
+					
+			saltstack 模块
+				c1.com 文件：
+					yum install python
+					yum isntall requests
+					create file a1.py
+					cp xx  xxx 
+					yum install xxxxx
+				c2.com 
+					yum install python
+					yum isntall requests
+					create file a1.py
+					cp xx  xxx 
+	d. 如何运行：
+		Salt和SSH：
+			Linux写定时任务，执行bin目录下可执行文件
+			- 获取未采集主机名（用户手动通过后台管理录入）
+			- 采集数据
+			- 汇报API
+		Agent：
+			Linux写定时任务，执行bin目录下可执行文件
+			- Agent上执行，采集资产并自动汇报
+			- 数据库有：更新
+			- 数据库无：增加【自动发现】
+		
+		**** 主机名不能重复 ****
+```
+
+```
+梳理：
+	a. 程序开发，完成
+	b. 部署：
+		    Agent模式，部署到每台机器【什么时候？如何部署？定时任务】
+		SSH和Salt模式，部署到中控机【什么时候？如何部署？定时任务】，
+			前提：
+				手动：IDC运维，装机前登录服务器管理系统，找到指定机器，修改主机名；
+				 API：通过Http请求进行操作
+```
+
+```
+3. sn号唯一 & 如何实现允许临时修改主机名
+	物理机：
+		sn，物理机唯一
+		
+		详细：
+			后台管理：
+				买服务器，清单：SN号，硬盘，内存...
+				作业：python 读取excel，xldt
+			
+			资产采集：
+				sn进行比较
+```
+
+```
+	物理机+虚拟机：
+		hostname,前提先定义规则，主机名不允许重复
+		
+		Agent：
+			买服务器，清单：SN号，硬盘，内存...
+			资产采集：
+				hostname
+		SSh,salt:
+			后台管理：
+				买服务器，清单：SN号，硬盘，内存...，录入
+				
+			装机：
+				c1.com 
+			...
+				
+	问题：如果临时修改了主机名，可能会出现资产重复汇报。
+		  
+		  安装系统完成后，立即执行采集资产任务：
+			old_hostname = cert文件空
+			new_hostname = 获取当前主机名【未篡改】
+			
+			如果： old_hostname为空，
+				   new_hostname，进行汇报并且写入到cert文件中
+```
+
+```
+			old_hostname = cert文件空
+			new_hostname = 获取当前主机名【未篡改】
+			if old_hostname ！= new_hostname：
+				old_hostname
+```
+
+```
+	统一口径：
+		SSH和Salt模式：
+			1. 购买，厂商提供：sn，硬盘和网卡基本信息，机房，机柜以及机柜上位置。通过excel录入到数据库。
+			2. 
+				手动：找到指定机器，安装系统，设置主机名，安装相关软件。
+				自动：cobbler装机+saltstack/puppet进行初始化
+				
+				后台管理：更新主机名
+				
+			3. 唯一标识： 主机名
+		Agent： 
+			物理机：
+				1. 购买，厂商提供：sn，硬盘和网卡基本信息，机房 机房，机柜以及机柜上位置。通过excel录入到数据库。
+				2. 
+					手动：找到指定机器，安装系统，设置主机名，安装相关软件。
+					自动：cobbler装机+saltstack/puppet进行初始化
+				3. 唯一标识： SN
+				
+			物理机+虚拟机：
+				1. 购买，厂商提供：sn
+				2. 
+					手动：找到指定机器，安装系统，设置主机名，安装相关软件。
+					自动：cobbler装机+saltstack/puppet进行初始化
+				3. 
+					采集资产：
+						- 自动发现： 自动收录硬件信息，【管理员，业务线，机房，手动操作】
+						- 已经存在： 更新
+					
+				4. 唯一标识： 主机名
+
+4. 事务
+	- 代码
+	- innodb
+	
+	def tran(request):
+		from django.db import transaction
+		try:
+			with transaction.atomic():
+				models.UserProfile.objects.create(name='a1',email='xxx',phone='xxxx',mobile='xxxx')
+				models.Server.objects.create(hostname='uuuuu',sn='FDIJNFIK234')
+		except Exception as e:
+			return HttpResponse('出现错误')
+
+		return HttpResponse('执行成功')
+```
+
+
+
+
+
+### 数据采集模式
+
+*数据采集的基本方式是，服务器上安装有三中模式，分别为agent模式，*
+
+#### agent模式
+
+*agent模式，agent负责采集，采集过后发送给api进行入库处理，这种模式需要在每台机器上安装agent，然后他们分别一起汇报给总的API*
+
+优点：速度快
+
+缺点：缺点是每台机器都要安装agent
+
+适用：服务器数量比较多的公司
+
+实现（代码是放在每一台服务器上面的）
+
+```python
+# agent 模式, 代码是放在每台服务器上的
+import subprocess
+result = subprocess.getoutput('ifconfig')
+```
+
+#### 基于ssh模式
+
+*服务器上不需要安装任何软件，全程靠ssh服务，但是需要一台服务器作为中控机，然后中控机分别给从每个服务器取数据，然后中控机把数据发送给API，但是速度慢*
+
+缺点：速度慢
+
+优点：无agent
+
+应用：小型公司
+
+实现(代码是放在中控机上面的)
+
+```pyhton
+# 2. SSH模式
+
+# pip3 install paramiko
+import paramiko
+
+# ip 192.168.16.72
+# 用户名 root
+# 密码 redhat
+#
+# 用户名和密码方式
+import paramiko
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+ssh.connect(hostname='192.168.16.72', port=22, username='root', password='redhat')
+stdin, stdout, stderr = ssh.exec_command('ifconfig')
+result = stdout.read()
+ssh.close()
+print(result)
+
+# 公钥私钥方式
+import paramiko
+# 创建ssh对象
+private_key = paramiko.RSAKey.from_private_key_file('/home/auto/.ssh/id_rsa')
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+# 链接机器
+ssh.connect(hostname='c1.salt.com', port=22, username='wupeiqi', pkey=private_key)
+# 执行命令
+stdin, stdout, stderr = ssh.exec_command('df')
+# 获取命令结果
+result = stdout.read()
+ssh.close()
+```
+
+#### 第三方工具（saltstack）
+
+*第三方工具也需要每个服务器安装minion，然后需要有一台服务器安装master，然后由master控制minion，然后拿到结果传给API，它内部不是靠ssh做的，二十靠rpc模式做的，比ssh速度快，内部靠队列实现*
+
+适用：一般公司都使用这种方式
+
+实现（master）
+
+```python
+# import subprocess
+# subprocess.getoutput('salt "c1.com" cmd.run "命令"')
+```
+
